@@ -1,7 +1,7 @@
 // Copyright: Hiroshi Ichikawa <http://gimite.net/en/>
 // License: New BSD License
 // Reference: http://dev.w3.org/html5/websockets/
-// Reference: http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-12
+// Reference: http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10
 
 (function() {
   
@@ -38,17 +38,11 @@
    * @param {string} headers
    */
   WebSocket = function(url, protocols, proxyHost, proxyPort, headers) {
-    logger.log("using Flash WebSocket");
     var self = this;
     self.__id = WebSocket.__nextId++;
     WebSocket.__instances[self.__id] = self;
     self.readyState = WebSocket.CONNECTING;
     self.bufferedAmount = 0;
-    if (typeof(window.ArrayBuffer) !== "undefined") {
-      self.binaryType = "arraybuffer";
-    } else {
-      self.binaryType = "array";
-    }
     self.__events = {};
     if (!protocols) {
       protocols = [];
@@ -68,13 +62,10 @@
 
   /**
    * Send data to the web socket.
-   * @param {DOMString} data    The DOMString to send to the socket.
-   * @param {ArrayBuffer} data  The ArrayBuffer to send to the socket.
-   * @param {Array} data        Array of 0-255 to send to the socket.
-   * @return void               
+   * @param {string} data  The data to send to the socket.
+   * @return {boolean}  True for success, false for failure.
    */
   WebSocket.prototype.send = function(data) {
-    var self = this;
     if (this.readyState == WebSocket.CONNECTING) {
       throw "INVALID_STATE_ERR: Web Socket connection has not been established";
     }
@@ -86,25 +77,13 @@
     // preserve all Unicode characters either e.g. "\uffff" in Firefox.
     // Note by wtritch: Hopefully this will not be necessary using ExternalInterface.  Will require
     // additional testing.
-
-    if ((typeof(data) === "object") &&
-        ((typeof(data.byteLength) !== "undefined") ||
-         (typeof(data.length) !== "undefined"))) {
-      // Array or ArrayBuffer
-      dtype = "a";
-      if (typeof(data.map) === "undefined") {
-        // Convert ArrayBuffer to normal Array 
-        var u8a = new Uint8Array(data), data = [];
-        for (var i = 0; i < u8a.length; i++) {
-          data.push(u8a[i]);
-        }
-      } 
-      data = data.map(function (num) {
-          return String.fromCharCode(num); } ).join('');
+    var result = WebSocket.__flash.send(this.__id, encodeURIComponent(data));
+    if (result < 0) { // success
+      return true;
     } else {
-      dtype = "s";
+      this.bufferedAmount += result;
+      return false;
     }
-    WebSocket.__flash.send(self.__id, dtype, encodeURIComponent(data));
   };
 
   /**
@@ -170,7 +149,7 @@
       events[i](event);
     }
     var handler = this["on" + event.type];
-    if (handler) handler(event);
+    if (handler) handler.apply(this, [event]);
   };
 
   /**
@@ -193,20 +172,6 @@
       jsEvent = this.__createSimpleEvent("close");
     } else if (flashEvent.type == "message") {
       var data = decodeURIComponent(flashEvent.message);
-      if (flashEvent.binary) {
-        if (this.binaryType === "arraybuffer") {
-          var ab = new Uint8Array(data.split('').map(
-                function(chr) { return chr.charCodeAt(0); }));
-          data = ab.buffer;
-        } else if (this.binaryType === "array") {
-          data = data.split('').map(
-                function(chr) { return chr.charCodeAt(0); });
-        } else if (this.binaryType === "blob") {
-          throw("Blob binaryType not supported");
-        } else {
-          throw("Invalid binaryType: " + this.binaryType);
-        }
-      }
       jsEvent = this.__createMessageEvent("message", data);
     } else {
       throw "unknown event type: " + flashEvent.type;
@@ -226,18 +191,14 @@
   };
   
   WebSocket.prototype.__createMessageEvent = function(type, data) {
-    //if (document.createEvent && window.MessageEvent && !window.opera) {
-    //  var event = document.createEvent("MessageEvent");
-    //  console.log("here6");
-    //  console.dir(data);
-    //  event.initMessageEvent("message", false, false, data, null, null, window, null);
-    //  event.data = data;
-    //  console.dir(event.data);
-    //  return event;
-    //} else {
+    if (document.createEvent && window.MessageEvent && !window.opera) {
+      var event = document.createEvent("MessageEvent");
+      event.initMessageEvent("message", false, false, data, null, null, window, null);
+      return event;
+    } else {
       // IE and Opera, the latter one truncates the data parameter after any 0x00 bytes.
       return {type: type, data: data, bubbles: false, cancelable: false};
-    //}
+    }
   };
   
   /**
@@ -273,12 +234,10 @@
       // For backword compatibility.
       window.WEB_SOCKET_SWF_LOCATION = WebSocket.__swfLocation;
     }
-    
     if (!window.WEB_SOCKET_SWF_LOCATION) {
       logger.error("[WebSocket] set WEB_SOCKET_SWF_LOCATION to location of WebSocketMain.swf");
       return;
     }
-    
     if (!window.WEB_SOCKET_SUPPRESS_CROSS_DOMAIN_SWF_ERROR &&
         !WEB_SOCKET_SWF_LOCATION.match(/(^|\/)WebSocketMainInsecure\.swf(\?.*)?$/) &&
         WEB_SOCKET_SWF_LOCATION.match(/^\w+:\/\/([^\/]+)/)) {
@@ -292,7 +251,6 @@
             "by WEB_SOCKET_SUPPRESS_CROSS_DOMAIN_SWF_ERROR = true;");
       }
     }
-    
     var container = document.createElement("div");
     container.id = "webSocketContainer";
     // Hides Flash box. We cannot use display: none or visibility: hidden because it prevents
@@ -301,7 +259,6 @@
     // Lite, we put it at (0, 0). This shows 1x1 box visible at left-top corner but this is
     // the best we can do as far as we know now.
     container.style.position = "absolute";
-    
     if (WebSocket.__isFlashLite()) {
       container.style.left = "0px";
       container.style.top = "0px";
@@ -309,7 +266,6 @@
       container.style.left = "-100px";
       container.style.top = "-100px";
     }
-    
     var holder = document.createElement("div");
     holder.id = "webSocketFlash";
     container.appendChild(holder);

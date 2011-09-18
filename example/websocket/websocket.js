@@ -29,7 +29,7 @@ function Node(port) {
   this.ws = new WebSocketServer({
     httpServer: this.http,
     fragmentOutgoingMessages: false,
-    keepalive: false // N.B. polyfill doesn't support ping/pong so far
+    keepalive: true // N.B. polyfill doesn't support ping/pong so far
   });
   // WebSocket connection handler
   this.ws.on('request', function(req) {

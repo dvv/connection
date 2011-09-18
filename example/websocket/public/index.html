@@ -3,6 +3,15 @@
     <link rel="stylesheet" media="all" href="less.css"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <script src="jquery-1.6.4.min.js"></script>
+    <script src="flash/swfobject.js"></script>
+    <script>
+    if (swfobject.getFlashPlayerVersion().major >= 10) {
+      WebSocket = false;
+      window.WEB_SOCKET_DEBUG = true;
+      window.WEB_SOCKET_SWF_LOCATION = 'flash/WebSocketMain.swf';
+    }
+    </script>
+    <script src="flash/web_socket.js"></script>
     <script src="connection.js"></script>
     <style>
       .box {
@@ -37,7 +46,7 @@
       </form>
     <script>
       var log;
-      var conn = new Connection('ws://127.0.0.1:3001');
+      var conn = new Connection(location.href.replace(/^http/, 'ws'));
       conn.on('open', function() {
           log(' [*] Opened (using: '+conn.socket.protocol+')');
       });
