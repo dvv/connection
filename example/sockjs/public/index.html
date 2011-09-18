@@ -1,0 +1,80 @@
+<!doctype html>
+<html><head>
+    <link rel="stylesheet" media="all" href="less.css"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <script src="jquery-1.6.4.min.js"></script>
+    <script src="sockjs-latest.min.js"></script>
+    <script src="connection.js"></script>
+    <style>
+      .box {
+          border: 1px dashed black;
+          border-radius: 4px;
+          -moz-border-radius: 4px;
+          width: 400px;
+          display: block;
+          height: 300px;
+          float: left;
+      }
+      #output {
+          border-color: grey;
+          overflow:auto;
+      }
+      #input {
+          vertical-align: text-top;
+          -moz-outline-style: none;
+          outline-style: none;
+          outline-width: 0px;
+          outline-color: -moz-use-text-color;
+      }
+      body {
+          background-color: #F0F0F0;
+      }
+    </style>
+<head><body lang="en">
+    <h2>Majek/SockJS-Node Echo Connection example</h2>
+      <form id="form">
+        <input id="input" autocomplete="off" class="box" align=top
+               value="type something here" />
+      </form>
+    <script>
+      var log;
+      var conn = new Connection('http://127.0.0.1:3001/ws');
+      conn.on('open', function() {
+          log(' [*] Opened (using: '+conn.socket.protocol+')');
+      });
+      conn.on('connect', function() {
+          log(' [*] Connected (using: '+conn.socket.protocol+')');
+      });
+      conn.on('disconnect', function() {
+          log(' [*] Disconnected');
+      });
+      conn.on('close', function() {
+          log(' [*] Closed');
+      });
+      conn.open();
+
+      $('#input').focus();
+      $('#form').submit(function() {
+          var val = $('#input').val();
+          $('#input').val('');
+          var l = ' [ ] sending: ' + JSON.stringify(val);
+          if (!conn.live) {
+              l += ' (error, connection not established)';
+          } else {
+              conn.send('you typed', val, function(result) {
+                log(' [ ] received: ' + result);
+              });
+          }
+          log(l);
+          return false;
+      });
+    </script>
+    <div id="output" class="box small" />
+    <script>
+      log = function (m) {
+          $('#output').append($("<code>").text(m));
+          $('#output').append($("<br>"));
+          $('#output').scrollTop($('#output').scrollTop()+10000);
+      }
+    </script>
+</body></html>

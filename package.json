@@ -1,0 +1,24 @@
+{
+    "name": "connection"
+  , "version": "0.0.1"
+  , "description": "A WebSocket messaging made easy"
+  , "keywords": ["websocket", "stud"]
+  , "author": "Vladimir Dronnikov <dronnikov@gmail.com>"
+  , "contributors": [
+    ]
+  , "dependencies": {
+    "simple-mime": "*",
+    "websocket": "*",
+    "sockjs": "*"
+    }
+  , "repositories": [{
+      "type": "git",
+      "url" : "https://github.com/dvv/connection.git"
+    }]
+  , "licenses": [{
+      "type" : "MIT",
+      "url" : "https://github.com/dvv/connection/raw/master/LICENSE"
+    }]
+  , "scripts": {
+    }
+}
