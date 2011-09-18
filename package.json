@@ -9,7 +9,7 @@
   , "dependencies": {
     "simple-mime": "*",
     "websocket": "*",
-    "sockjs": "*"
+    "sockjs": "https://github.com/dvv/sockjs-node/tarball/master"
     }
   , "repositories": [{
       "type": "git",
