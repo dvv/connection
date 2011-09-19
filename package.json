@@ -9,6 +9,7 @@
   , "dependencies": {
     "simple-mime": "*",
     "websocket": "*",
+    "useragent": "*",
     "sockjs": "https://github.com/dvv/sockjs-node/tarball/master"
     }
   , "repositories": [{

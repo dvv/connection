@@ -9,10 +9,13 @@
       WebSocket = false;
       window.WEB_SOCKET_DEBUG = true;
       window.WEB_SOCKET_SWF_LOCATION = 'flash/WebSocketMain.swf';
+      WebSocket.loadFlashPolicyFile('xmlsocket://localhost');
     }
     </script>
     <script src="flash/web_socket.js"></script>
-    <script src="connection.js"></script>
+    <script>
+    </script>
+    <script src="conn.js"></script>
     <style>
       .box {
           border: 1px dashed black;
@@ -46,6 +49,7 @@
       </form>
     <script>
       var log;
+      WebSocket.loadFlashPolicyFile('xmlsocket://localhost');
       var conn = new Connection(location.href.replace(/^http/, 'ws'));
       conn.on('open', function() {
           log(' [*] Opened (using: '+conn.socket.protocol+')');

@@ -14,17 +14,31 @@ return [
   Stack.static(__dirname + '/public', 'index.html', {
     maxAge: 0,
   }),
+  // determine client user agent
+  Stack.userAgent(),
+  // serve client script
+  function(req, res, next) {
+    if (req.url === '/conn.js' && req.method === 'GET') {
+      if (req.ua.hybi8) {
+        res.writeHead(301, {'Location': 'connection.js'});
+        res.end();
+      } else {
+        res.writeHead(301, {'Location': 'connection-flash.js'});
+        res.end();
+      }
+    } else next();
+  }
 ];
 }
 
-///var WebSocketServer = require('sockjs').Server;
-///var Connection = require('connection/sockjs');
 var WebSocketServer = require('websocket').server;
 var Connection = require('connection/websocket');
 
 function Node(port) {
   // web server
   this.http = Stack.listen(stack(), {}, port);
+  // upgrade to flash policy server
+  require('./lib/flash-policy')(this.http);
   // WebSocket server on top of web server
   this.ws = new WebSocketServer({
     httpServer: this.http,
