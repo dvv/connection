@@ -159,7 +159,7 @@ Connection.prototype.ack = function(aid /*, args... */) {
 };
 
 /**
- * Augment Transport
+ * Augment and export Transport
  */
 
 var Transport = require('sockjs/lib/transport').Session;
@@ -167,3 +167,5 @@ var Transport = require('sockjs/lib/transport').Session;
 for (var i in Connection.prototype) {
   Transport.prototype[i] = Connection.prototype[i];
 }
+
+module.exports = Transport;

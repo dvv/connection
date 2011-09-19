@@ -10,7 +10,9 @@
     "simple-mime": "*",
     "websocket": "*",
     "useragent": "*",
-    "sockjs": "https://github.com/dvv/sockjs-node/tarball/master"
+    "sockjs": "https://github.com/dvv/sockjs-node/tarball/master",
+    "redis": "latest",
+    "bison": "latest"
     }
   , "repositories": [{
       "type": "git",

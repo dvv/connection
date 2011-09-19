@@ -24,13 +24,14 @@ var isArray = Array.isArray;
  * @api public
  */
 
-module.exports = Connection;
+function Connection() {
+}
 
-function Connection(req) {
+Connection.prototype.connect = function() {
   this.server = this.socket.server;
   this.on('close', handleSocketClose.bind(this));
   this.on('message', handleSocketMessage.bind(this));
-}
+};
 
 /**
  * Prefix reserved for ack events
@@ -160,7 +161,7 @@ Connection.prototype.ack = function(aid /*, args... */) {
 };
 
 /**
- * Augment Transport
+ * Augment and export Transport
  */
 
 var Transport = require('websocket/lib/WebSocketConnection');
@@ -168,3 +169,5 @@ var Transport = require('websocket/lib/WebSocketConnection');
 for (var i in Connection.prototype) {
   Transport.prototype[i] = Connection.prototype[i];
 }
+
+module.exports = Transport;

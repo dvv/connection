@@ -59,7 +59,11 @@ exports.Connection = Connection;
 
 function Connection(url) {
   // use provided URL, or guess one
-  this.url = url || window.location.href;//.replace(/^http/, 'ws');
+  this.url = url || window.location.href;
+  // SockJS doesn't use ws[s]://
+  if (typeof SockJS === 'undefined') {
+    this.url = this.url.replace(/^http/, 'ws');
+  }
   // outgoing messages queue
   // TODO: implement outgoing async filters?
   this._queue = [];
@@ -248,7 +252,8 @@ function handleSocketClose() {
     var self = this;
     setTimeout(function() {
       self.open();
-    }, this.reconnectTimeout *= 2);
+    }, this.reconnectTimeout);
+    if (this.reconnectTimeout < 60000) this.reconnectTimeout *= 2;
   // reconnect is disabled!
   } else {
     // mark closed

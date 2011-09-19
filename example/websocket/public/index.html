@@ -3,18 +3,6 @@
     <link rel="stylesheet" media="all" href="less.css"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <script src="jquery-1.6.4.min.js"></script>
-    <script src="flash/swfobject.js"></script>
-    <script>
-    if (swfobject.getFlashPlayerVersion().major >= 10) {
-      WebSocket = false;
-      window.WEB_SOCKET_DEBUG = true;
-      window.WEB_SOCKET_SWF_LOCATION = 'flash/WebSocketMain.swf';
-      WebSocket.loadFlashPolicyFile('xmlsocket://localhost');
-    }
-    </script>
-    <script src="flash/web_socket.js"></script>
-    <script>
-    </script>
     <script src="conn.js"></script>
     <style>
       .box {
@@ -48,17 +36,29 @@
                value="type something here" />
       </form>
     <script>
-      var log;
-      WebSocket.loadFlashPolicyFile('xmlsocket://localhost');
+      function log(m) {
+          $('#output').append($("<code>").text(m));
+          $('#output').append($("<br>"));
+          $('#output').scrollTop($('#output').scrollTop()+10000);
+      }
       var conn = new Connection(location.href.replace(/^http/, 'ws'));
       conn.on('open', function() {
           log(' [*] Opened (using: '+conn.socket.protocol+')');
+      });
+      conn.on('connecting', function() {
+          log(' [*] Connecting (using: '+conn.socket.protocol+')');
       });
       conn.on('connect', function() {
           log(' [*] Connected (using: '+conn.socket.protocol+')');
       });
       conn.on('disconnect', function() {
           log(' [*] Disconnected');
+      });
+      conn.on('auth', function(id, aid) {
+          log(' [*] Auth?:' + id);
+          this.id = this.id || id;
+          log(' [*] Auth!:' + this.id);
+          this.ack(aid, null, this.id);
       });
       conn.on('close', function() {
           log(' [*] Closed');
@@ -82,11 +82,4 @@
       });
     </script>
     <div id="output" class="box small" />
-    <script>
-      log = function (m) {
-          $('#output').append($("<code>").text(m));
-          $('#output').append($("<br>"));
-          $('#output').scrollTop($('#output').scrollTop()+10000);
-      }
-    </script>
 </body></html>
