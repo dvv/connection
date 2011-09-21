@@ -40,19 +40,20 @@ function Node(port) {
   // upgrade to flash policy server
   require('./lib/flash-policy')(this.http);
   // WebSocket server on top of web server
-  this.ws = new WebSocketServer({
+  var ws = this.ws = new WebSocketServer({
     httpServer: this.http,
     fragmentOutgoingMessages: false,
     keepalive: true // N.B. polyfill doesn't support ping/pong so far
   });
   // WebSocket connection handler
   this.ws.on('request', function(req) {
+    // `this` is the server
     //req.reject(403); return;
     var conn = req.accept(null, req.origin);
     // examine c in REPL
     repl.c = conn;
     // install default handlers
-    conn.connect();
+    conn.connect(this);
     // challenge...
     conn.send('auth', Math.random().toString().substring(2), function(err, id) {
       // ...response

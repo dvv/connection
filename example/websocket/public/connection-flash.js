@@ -1592,16 +1592,11 @@ var swfobject=function(){var D="undefined",r="object",S="Shockwave Flash",W="Sho
     }
     
     var jsEvent;
-console.log('EVENT', flashEvent);
     if (flashEvent.type == "open" || flashEvent.type == "error") {
       jsEvent = this.__createSimpleEvent(flashEvent.type);
-    } else if (flashEvent.type == "close0") {
-      // TODO implement jsEvent.wasClean
+    } else if (flashEvent.type == "close" || flashEvent.type == "closeclean") {
       jsEvent = this.__createSimpleEvent("close");
-      jsEvent.wasClean = false;
-    } else if (flashEvent.type == "close1") {
-      jsEvent = this.__createSimpleEvent("close");
-      jsEvent.wasClean = true;
+      jsEvent.wasClean = flashEvent.type == "closeclean";
     } else if (flashEvent.type == "message") {
       var data = decodeURIComponent(flashEvent.message);
       jsEvent = this.__createMessageEvent("message", data);
@@ -1992,16 +1987,11 @@ function handleSocketMessage(event) {
   try {
     // event?
     if (isArray(args = Connection.decode(message))) {
-      // handle orderly disconnect from remote side
-      if (args[0] === Connection.SERVICE_CHANNEL + 'close') {
-        this.close();
-      // ordinary event
-      } else {
-        // named event
-        this.emit.apply(this, args);
-        // catchall event
-        this.emit.apply(this, ['event'].concat(args));
-      }
+      // named event
+      this.emit.apply(this, args);
+      // catchall event
+      // FIXME: feasible?
+      this.emit.apply(this, ['event'].concat(args));
     // data?
     } else {
       // emit 'data' event
@@ -2058,7 +2048,8 @@ console.log('CLOSEEV', this.socket.readyState, ev);
     this.emit('disconnect');
   }
   // reconnect is not disabled?
-  if (this.reconnectTimeout) {
+  // and close is not orderly closed
+  if (this.reconnectTimeout && !ev.wasClean) {
     // shedule reconnect
     var self = this;
     setTimeout(function() {

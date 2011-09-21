@@ -27,8 +27,8 @@ var isArray = Array.isArray;
 function Connection() {
 }
 
-Connection.prototype.connect = function() {
-  this.server = this.socket.server;
+Connection.prototype.connect = function(server) {
+  this.server = server;
   this.on('close', handleSocketClose.bind(this));
   this.on('message', handleSocketMessage.bind(this));
 };

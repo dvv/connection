@@ -185,16 +185,11 @@ function handleSocketMessage(event) {
   try {
     // event?
     if (isArray(args = Connection.decode(message))) {
-      // handle orderly disconnect from remote side
-      if (args[0] === Connection.SERVICE_CHANNEL + 'close') {
-        this.close();
-      // ordinary event
-      } else {
-        // named event
-        this.emit.apply(this, args);
-        // catchall event
-        this.emit.apply(this, ['event'].concat(args));
-      }
+      // named event
+      this.emit.apply(this, args);
+      // catchall event
+      // FIXME: feasible?
+      this.emit.apply(this, ['event'].concat(args));
     // data?
     } else {
       // emit 'data' event
@@ -251,7 +246,8 @@ console.log('CLOSEEV', this.socket.readyState, ev);
     this.emit('disconnect');
   }
   // reconnect is not disabled?
-  if (this.reconnectTimeout) {
+  // and close is not orderly closed
+  if (this.reconnectTimeout && !ev.wasClean) {
     // shedule reconnect
     var self = this;
     setTimeout(function() {

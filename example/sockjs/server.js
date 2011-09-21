@@ -24,7 +24,7 @@ function Node(port) {
   // web server
   this.http = Stack.listen(stack(), {}, port);
   // WebSocket server on top of web server
-  this.ws = new WebSocketServer({
+  var ws = this.ws = new WebSocketServer({
     sockjs_url: 'sockjs-latest.min.js',
     // test
     //disabled_transports: ['websocket']
@@ -34,10 +34,21 @@ function Node(port) {
     prefix:'[/]ws'
   });
   this.ws.on('open', function(conn) {
+    // `this` is the server
     // examine c in REPL
     repl.c = conn;
     // install default handlers
-    Connection.call(conn);
+    conn.connect(this);
+    // challenge...
+    conn.send('auth', Math.random().toString().substring(2), function(err, id) {
+      // ...response
+      if (err) {
+        this.close();
+      } else {
+        this.id = id;
+      }
+    });
+    // install custom handlers
     conn.on('you typed', function(val, aid) {
       conn.ack(aid, val);
     });

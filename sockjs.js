@@ -27,9 +27,13 @@ var isArray = Array.isArray;
 module.exports = Connection;
 
 function Connection() {
+}
+
+Connection.prototype.connect = function(server) {
+  this.server = server;
   this.on('close', handleSocketClose.bind(this));
   this.on('message', handleSocketMessage.bind(this));
-}
+};
 
 /**
  * Prefix reserved for ack events
@@ -68,8 +72,9 @@ Connection.decode = JSON.parse;
 function handleSocketMessage(message) {
   if (!message) return;
   // TODO: only utf8 messages so far
-  if (message.type !== 'utf8') return;
-  message = message.utf8Data;
+  ///if (message.type !== 'utf8') return;
+  ///message = message.utf8Data;
+  message = message.data;
   if (!message) return;
   var args;
   // FIXME: Connection.decode may throw, that's why try/catch.
@@ -163,6 +168,7 @@ Connection.prototype.ack = function(aid /*, args... */) {
  */
 
 var Transport = require('sockjs/lib/transport').Session;
+Transport.prototype.sendUTF = Transport.prototype.send;
 // mixin Connection methods
 for (var i in Connection.prototype) {
   Transport.prototype[i] = Connection.prototype[i];

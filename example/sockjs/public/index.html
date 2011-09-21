@@ -37,16 +37,32 @@
                value="type something here" />
       </form>
     <script>
-      var log;
+      function log(m) {
+          $('#output').append($("<code>").text(m));
+          $('#output').append($("<br>"));
+          $('#output').scrollTop($('#output').scrollTop()+10000);
+      }
       var conn = new Connection('http://127.0.0.1:3001/ws');
+      conn.on('event', function(event) {
+        log(' [*] Event: ' + event);
+      });
       conn.on('open', function() {
-          log(' [*] Opened (using: '+conn.socket.protocol+')');
+        log(' [*] Opened (using: '+conn.socket.protocol+')');
+      });
+      conn.on('connecting', function() {
+          log(' [*] Connecting (using: '+conn.socket.protocol+')');
       });
       conn.on('connect', function() {
           log(' [*] Connected (using: '+conn.socket.protocol+')');
       });
       conn.on('disconnect', function() {
           log(' [*] Disconnected');
+      });
+      conn.on('auth', function(id, aid) {
+          log(' [*] Auth?:' + id);
+          this.id = this.id || id;
+          log(' [*] Auth!:' + this.id);
+          this.ack(aid, null, this.id);
       });
       conn.on('close', function() {
           log(' [*] Closed');
@@ -70,11 +86,4 @@
       });
     </script>
     <div id="output" class="box small" />
-    <script>
-      log = function (m) {
-          $('#output').append($("<code>").text(m));
-          $('#output').append($("<br>"));
-          $('#output').scrollTop($('#output').scrollTop()+10000);
-      }
-    </script>
 </body></html>
