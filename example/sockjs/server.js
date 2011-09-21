@@ -26,8 +26,9 @@ function Node(port) {
   // WebSocket server on top of web server
   var ws = this.ws = new WebSocketServer({
     sockjs_url: 'sockjs-latest.min.js',
+    jsessionid: false,
     // test
-    //disabled_transports: ['websocket']
+    disabled_transports: ['websocket']
   });
   // WebSocket connection handler
   this.ws.installHandlers(this.http, {
@@ -49,9 +50,15 @@ function Node(port) {
       }
     });
     // install custom handlers
-    conn.on('you typed', function(val, aid) {
-      conn.ack(aid, val);
-    });
+    //conn.on('you typed', function(val, aid) {
+    //  conn.ack(aid, val);
+    //});
+  });
+  // you can reduce number of closures by listening to catchall event
+  this.ws.on('wsevent', function(conn, event, arg) {
+    if (event === 'you typed') {
+      conn.ack(arguments[3], arguments[2]);
+    }
   });
   // notify
   console.log('Listening to http://*:' + port + '. Use Ctrl+C to stop.');

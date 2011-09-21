@@ -176,10 +176,10 @@ Connection.decode = JSON.parse;
  */
 
 function handleSocketMessage(event) {
+console.log('INMESSAGE', event);
   var message = event.data;
   if (!message) return;
   var args;
-///console.log('INMESSAGE', message);
   // FIXME: Connection.decode may throw, that's why try/catch.
   // OTOH, it slows things down. Solution?
   try {
@@ -238,16 +238,16 @@ function handleSocketOpen() {
  */
 
 function handleSocketClose(ev) {
-console.log('CLOSEEV', this.socket.readyState, ev);
   // socket is connected?
   if (this.live) {
     // mark disconnected
     this.live = false;
     this.emit('disconnect');
   }
-  // reconnect is not disabled?
-  // and close is not orderly closed
-  if (this.reconnectTimeout && !ev.wasClean) {
+  // orderly closed?
+  var wasClean = ev.wasClean || ev.status === 1000;
+  // reconnect is not disabled and not orderly closed?
+  if (this.reconnectTimeout && !wasClean) {
     // shedule reconnect
     var self = this;
     setTimeout(function() {

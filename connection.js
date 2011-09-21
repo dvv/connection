@@ -16,7 +16,8 @@
  * @api private
  */
 
-var Transport = typeof SockJS !== 'undefined' ? SockJS : (window.WebSocket || window.MozWebSocket);
+var hasSockJS = typeof SockJS !== 'undefined';
+var Transport = hasSockJS ? SockJS : (window.WebSocket || window.MozWebSocket);
 
 /**
  * Well-known useful shortcuts and shims
@@ -61,7 +62,7 @@ function Connection(url) {
   // use provided URL, or guess one
   this.url = url || window.location.href;
   // SockJS doesn't use ws[s]://
-  if (typeof SockJS === 'undefined') {
+  if (!hasSockJS) {
     this.url = this.url.replace(/^http/, 'ws');
   }
   // outgoing messages queue
@@ -176,27 +177,30 @@ Connection.decode = JSON.parse;
  */
 
 function handleSocketMessage(event) {
+console.log('INMESSAGE', event);
   var message = event.data;
   if (!message) return;
   var args;
-///console.log('INMESSAGE', message);
-  // FIXME: Connection.decode may throw, that's why try/catch.
-  // OTOH, it slows things down. Solution?
-  try {
-    // event?
-    if (isArray(args = Connection.decode(message))) {
-      // named event
-      this.emit.apply(this, args);
-      // catchall event
-      // FIXME: feasible?
-      this.emit.apply(this, ['event'].concat(args));
-    // data?
-    } else {
-      // emit 'data' event
-      this.emit('data', args);
+  // N.B. Connection.decode may throw
+  if (!hasSockJS) {
+    try {
+      message = Connection.decode(message);
+    } catch(e) {
+      console.error('ONMESSAGEERR', e, message);
+      message = [];
     }
-  } catch(e) {
-    console.error('ONMESSAGEERR', e, message);
+  }
+  // event?
+  if (isArray(args = message)) {
+    // named event
+    this.emit.apply(this, args);
+    // catchall event
+    // FIXME: feasible?
+    this.emit.apply(this, ['event'].concat(args));
+  // data?
+  } else {
+    // emit 'data' event
+    this.emit('data', args);
   }
 }
 
@@ -398,7 +402,7 @@ Connection.prototype.flush = function() {
     // N.B. WebSocket guarantees that once `#send()` returns, the
     // message is put on wire
     try {
-      this.socket.send(Connection.encode(args));
+      this.socket.send(hasSockJS ? args : Connection.encode(args));
       // message is sent ok. prune it from queue
       this._queue.shift();
     } catch(err) {

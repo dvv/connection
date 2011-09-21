@@ -55,43 +55,26 @@ Connection.nonce = function() {
 };
 
 /**
- * Define codec for messages
- *
- * @api private
- */
-
-Connection.encode = JSON.stringify;
-Connection.decode = JSON.parse;
-
-/**
  * Transport: handle incoming messages
  *
  * @api private
  */
 
 function handleSocketMessage(message) {
+//console.log('INMESSAGE', message);
   if (!message) return;
-  // TODO: only utf8 messages so far
-  ///if (message.type !== 'utf8') return;
-  ///message = message.utf8Data;
   message = message.data;
   if (!message) return;
   var args;
-  // FIXME: Connection.decode may throw, that's why try/catch.
-  // OTOH, it slows things down. Solution?
-  try {
-    // event?
-    if (isArray(args = Connection.decode(message))) {
-      this.emit.apply(this, args);
-      this.server.emit.apply(this.server, ['wsevent', this].concat(args));
-    // data?
-    } else {
-      // emit 'data' event
-      this.emit('data', args);
-      this.server.emit('wsdata', this, args);
-    }
-  } catch(e) {
-    console.error('ONMESSAGEERR', e.stack, message);
+  // event?
+  if (isArray(args = message)) {
+    this.emit.apply(this, args);
+    this.server.emit.apply(this.server, ['wsevent', this].concat(args));
+  // data?
+  } else {
+    // emit 'data' event
+    this.emit('data', args);
+    this.server.emit('wsdata', this, args);
   }
 }
 
@@ -142,7 +125,7 @@ Connection.prototype.send = function(/* args... */) {
     }
     args[args.length - 1] = aid;
   }
-  this.sendUTF(Connection.encode(args));
+  this.sendUTF(args);
   return this;
 };
 
