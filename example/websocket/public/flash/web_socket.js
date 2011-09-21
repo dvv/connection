@@ -165,11 +165,16 @@
     }
     
     var jsEvent;
+console.log('EVENT', flashEvent);
     if (flashEvent.type == "open" || flashEvent.type == "error") {
       jsEvent = this.__createSimpleEvent(flashEvent.type);
-    } else if (flashEvent.type == "close") {
+    } else if (flashEvent.type == "close0") {
       // TODO implement jsEvent.wasClean
       jsEvent = this.__createSimpleEvent("close");
+      jsEvent.wasClean = false;
+    } else if (flashEvent.type == "close1") {
+      jsEvent = this.__createSimpleEvent("close");
+      jsEvent.wasClean = true;
     } else if (flashEvent.type == "message") {
       var data = decodeURIComponent(flashEvent.message);
       jsEvent = this.__createMessageEvent("message", data);

@@ -42,8 +42,11 @@
           $('#output').scrollTop($('#output').scrollTop()+10000);
       }
       var conn = new Connection(location.href.replace(/^http/, 'ws'));
+      conn.on('event', function(event) {
+        log(' [*] Event: ' + event);
+      });
       conn.on('open', function() {
-          log(' [*] Opened (using: '+conn.socket.protocol+')');
+        log(' [*] Opened (using: '+conn.socket.protocol+')');
       });
       conn.on('connecting', function() {
           log(' [*] Connecting (using: '+conn.socket.protocol+')');

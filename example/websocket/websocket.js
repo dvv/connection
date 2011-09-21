@@ -47,14 +47,12 @@ function Node(port) {
   });
   // WebSocket connection handler
   this.ws.on('request', function(req) {
-console.log('CONN');
     //req.reject(403); return;
     var conn = req.accept(null, req.origin);
     // examine c in REPL
     repl.c = conn;
     // install default handlers
     conn.connect();
-console.log('CONN');
     // challenge...
     conn.send('auth', Math.random().toString().substring(2), function(err, id) {
       // ...response

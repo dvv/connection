@@ -1592,11 +1592,16 @@ var swfobject=function(){var D="undefined",r="object",S="Shockwave Flash",W="Sho
     }
     
     var jsEvent;
+console.log('EVENT', flashEvent);
     if (flashEvent.type == "open" || flashEvent.type == "error") {
       jsEvent = this.__createSimpleEvent(flashEvent.type);
-    } else if (flashEvent.type == "close") {
+    } else if (flashEvent.type == "close0") {
       // TODO implement jsEvent.wasClean
       jsEvent = this.__createSimpleEvent("close");
+      jsEvent.wasClean = false;
+    } else if (flashEvent.type == "close1") {
+      jsEvent = this.__createSimpleEvent("close");
+      jsEvent.wasClean = true;
     } else if (flashEvent.type == "message") {
       var data = decodeURIComponent(flashEvent.message);
       jsEvent = this.__createMessageEvent("message", data);
@@ -1981,7 +1986,7 @@ function handleSocketMessage(event) {
   var message = event.data;
   if (!message) return;
   var args;
-console.log('INMESSAGE', message);
+///console.log('INMESSAGE', message);
   // FIXME: Connection.decode may throw, that's why try/catch.
   // OTOH, it slows things down. Solution?
   try {
@@ -1992,7 +1997,10 @@ console.log('INMESSAGE', message);
         this.close();
       // ordinary event
       } else {
+        // named event
         this.emit.apply(this, args);
+        // catchall event
+        this.emit.apply(this, ['event'].concat(args));
       }
     // data?
     } else {
@@ -2041,7 +2049,8 @@ function handleSocketOpen() {
  * @api private
  */
 
-function handleSocketClose() {
+function handleSocketClose(ev) {
+console.log('CLOSEEV', this.socket.readyState, ev);
   // socket is connected?
   if (this.live) {
     // mark disconnected
@@ -2199,10 +2208,13 @@ Connection.prototype.flush = function() {
     }
     // N.B. WebSocket guarantees that once `#send()` returns, the
     // message is put on wire
-    // TODO: try/catch?
-    this.socket.send(Connection.encode(args));
-    // message is sent ok. prune it from queue
-    this._queue.shift();
+    try {
+      this.socket.send(Connection.encode(args));
+      // message is sent ok. prune it from queue
+      this._queue.shift();
+    } catch(err) {
+      break;
+    }
   }
   return this;
 };

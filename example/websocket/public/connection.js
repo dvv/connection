@@ -179,7 +179,7 @@ function handleSocketMessage(event) {
   var message = event.data;
   if (!message) return;
   var args;
-console.log('INMESSAGE', message);
+///console.log('INMESSAGE', message);
   // FIXME: Connection.decode may throw, that's why try/catch.
   // OTOH, it slows things down. Solution?
   try {
@@ -190,7 +190,10 @@ console.log('INMESSAGE', message);
         this.close();
       // ordinary event
       } else {
+        // named event
         this.emit.apply(this, args);
+        // catchall event
+        this.emit.apply(this, ['event'].concat(args));
       }
     // data?
     } else {
@@ -239,7 +242,8 @@ function handleSocketOpen() {
  * @api private
  */
 
-function handleSocketClose() {
+function handleSocketClose(ev) {
+console.log('CLOSEEV', this.socket.readyState, ev);
   // socket is connected?
   if (this.live) {
     // mark disconnected
@@ -397,10 +401,13 @@ Connection.prototype.flush = function() {
     }
     // N.B. WebSocket guarantees that once `#send()` returns, the
     // message is put on wire
-    // TODO: try/catch?
-    this.socket.send(Connection.encode(args));
-    // message is sent ok. prune it from queue
-    this._queue.shift();
+    try {
+      this.socket.send(Connection.encode(args));
+      // message is sent ok. prune it from queue
+      this._queue.shift();
+    } catch(err) {
+      break;
+    }
   }
   return this;
 };
