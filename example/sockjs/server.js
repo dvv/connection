@@ -36,7 +36,7 @@ function Node(port) {
     sockjs_url: 'sockjs.js',
     jsessionid: false,
     // test
-    disabled_transports: ['websocket']
+    //disabled_transports: ['websocket']
   });
   // WebSocket connection handler
   this.ws.installHandlers(this.http, {
@@ -61,10 +61,10 @@ function Node(port) {
     }
   });
   this.ws.on('registered', function(conn, groups) {
-    console.log('REGISTERED', conn.id, groups);
+    console.error('REGISTERED', conn.id, groups);
   });
   this.ws.on('unregistered', function(conn, groups) {
-    console.log('UNREGISTERED', conn.id, groups);
+    console.error('UNREGISTERED', conn.id, groups);
   });
   // notify
   console.log('Listening to http://*:' + port + '. Use Ctrl+C to stop.');

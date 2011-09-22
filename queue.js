@@ -125,7 +125,8 @@ function Manager(id) {
       }
     });
     // TODO: consider moving out
-    conn.on('close', function() {
+    conn.on('close', function(status) {
+console.error('CLOSE', conn.id, status);
       self.unregister(conn, function(err, groups) {
         // TODO: handle errors
         self.emit('unregistered', conn, groups);
