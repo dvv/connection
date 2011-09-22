@@ -10,7 +10,8 @@
     "simple-mime": "*",
     "websocket": "*",
     "useragent": "*",
-    "sockjs": "https://github.com/dvv/sockjs-node/tarball/master",
+    "sockjs": "sockjs",
+    "sockjs-client": "sockjs-client",
     "redis": "latest",
     "bison": "latest"
     }

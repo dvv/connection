@@ -3,7 +3,7 @@
     <link rel="stylesheet" media="all" href="less.css"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <script src="jquery-1.6.4.min.js"></script>
-    <script src="sockjs-latest.min.js"></script>
+    <script src="sockjs.js"></script>
     <script src="connection.js"></script>
     <style>
       .box {
@@ -42,7 +42,7 @@
           $('#output').append($("<br>"));
           $('#output').scrollTop($('#output').scrollTop()+10000);
       }
-      var conn = new Connection('http://127.0.0.1:3001/ws');
+      var conn = new Connection(location.href + 'ws');
       conn.on('event', function(event) {
         log(' [*] Event: ' + event);
       });

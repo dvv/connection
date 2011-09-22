@@ -24,8 +24,8 @@ function Node(port) {
   // web server
   this.http = Stack.listen(stack(), {}, port);
   // WebSocket server on top of web server
-  var ws = this.ws = new WebSocketServer({
-    sockjs_url: 'sockjs-latest.min.js',
+  this.ws = new WebSocketServer({
+    sockjs_url: 'sockjs.js',
     jsessionid: false,
     // test
     disabled_transports: ['websocket']
@@ -55,7 +55,7 @@ function Node(port) {
     //});
   });
   // you can reduce number of closures by listening to catchall event
-  this.ws.on('wsevent', function(conn, event, arg) {
+  this.ws.on('wsevent', function(conn, event /*, args... */) {
     if (event === 'you typed') {
       conn.ack(arguments[3], arguments[2]);
     }
