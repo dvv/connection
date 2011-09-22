@@ -19,6 +19,14 @@ return [
 
 var WebSocketServer = require('sockjs').Server;
 var Connection = require('connection/sockjs');
+WebSocketServer.prototype.ids = function() {
+  return Object.keys(this.conns);
+};
+
+var Manager = require('connection/queue');
+for (var i in Manager.prototype) {
+  WebSocketServer.prototype[i] = Manager.prototype[i];
+}
 
 function Node(port) {
   // web server
@@ -34,21 +42,13 @@ function Node(port) {
   this.ws.installHandlers(this.http, {
     prefix:'[/]ws'
   });
+  // upgrade server to manager
+  Manager.call(this.ws);
+  // current connections
   this.ws.on('open', function(conn) {
     // `this` is the server
     // examine c in REPL
     repl.c = conn;
-    // install default handlers
-    conn.connect(this);
-    // challenge...
-    conn.send('auth', Math.random().toString().substring(2), function(err, id) {
-      // ...response
-      if (err) {
-        this.close();
-      } else {
-        this.id = id;
-      }
-    });
     // install custom handlers
     //conn.on('you typed', function(val, aid) {
     //  conn.ack(aid, val);
@@ -60,15 +60,21 @@ function Node(port) {
       conn.ack(arguments[3], arguments[2]);
     }
   });
+  this.ws.on('registered', function(conn, groups) {
+    console.log('REGISTERED', conn.id, groups);
+  });
+  this.ws.on('unregistered', function(conn, groups) {
+    console.log('UNREGISTERED', conn.id, groups);
+  });
   // notify
   console.log('Listening to http://*:' + port + '. Use Ctrl+C to stop.');
 }
 
 // spawn workers
 var s1 = new Node(3001);
-var s2 = new Node(3002);
+/*var s2 = new Node(3002);
 var s3 = new Node(3003);
-var s4 = new Node(3004);
+var s4 = new Node(3004);*/
 
 // REPL for introspection
 var repl = require('repl').start('node> ').context;

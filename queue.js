@@ -12,7 +12,7 @@ var slice = Array.prototype.slice;
  * 
  */
 
-var Connection = require('./websocket');
+var Connection = require('sockjs/lib/transport').Session;
 
 Connection.prototype.join = function(groups, cb) {
   this.manager.join(this, [].concat(groups), cb);
@@ -38,7 +38,7 @@ Connection.prototype.groups = function(cb) {
 function Group(id, manager) {
   this.id = id;
   this.manager = manager;
-
+  // connections
   this.conns = {};
 }
 
@@ -60,12 +60,23 @@ Group.prototype.members = function(cb) {
   return this;
 };
 
-Group.prototype.handleMessage = function(event, payload, cb) {
-  for (var sid in this.conns) {
-    this.conns[sid].emit(event, payload);
+Group.prototype.handleMessage = function(/* args..., cb */) {
+  var args = slice.call(arguments);
+  var cb = args[args.length-1];
+  if (typeof cb === 'function') {
+    args.pop();
+  } else {
+    cb = null;
   }
-  this.emit(event, payload);
-  typeof cb === 'function' && cb();
+  var self = this;
+  var conns = this.conns;
+  process.nextTick(function() {
+    for (var cid in conns) {
+      conns[cid].emit.apply(conns[cid], args);
+    }
+    self.emit.apply(self, args);
+    cb && cb();
+  });
   return this;
 };
 
@@ -75,35 +86,59 @@ Group.prototype.handleMessage = function(event, payload, cb) {
  * 
  */
 
+module.exports = Manager;
+
 function Manager(id) {
   this.id = id;
+  var self = this;
+  // subscribe to pubsub messages
   var sub = require('redis').createClient();
-  sub.psubscribe('*'); sub.on('pmessage', this.handleMessage.bind(this));
-  // managed sockets
+  sub.psubscribe('*');
+  sub.on('pmessage', this.handleMessage.bind(this));
+  // managed connections
   this.conns = {};
   // managed groups
   this.groups = {};
   // named filtering functions
   this.filters = {};
-  //
-  this.on('connection', function(rawsock) {
-    var socket = this.socket(this.nonce());
-  });
-  this.on('close', function(sock, forced) {
-    if (forced) {
-      // remove from groups etc.
-    } else {
-      // wait a bit in case it reconnnects?
-    }
-    delete this.conns[sock.id];
+  // handle connection registration
+  this.on('open', function(conn) {
+    // install default handlers
+    conn.connect(this);
+    // FIXME: this is redundant, .server already exists
+    conn.manager = this;
+    // negotiate connection id
+    // challenge. wait for reply no more than 1000 ms
+    conn.expire(1000).send('auth', conn.id, function(err, id) {
+      // ...response
+      if (err) {
+        conn.close();
+        return;
+      }
+      // id is negotiated. register connection
+      conn.id = id;
+      if (!self.conns[id]) {
+        self.register(conn, function(err, groups) {
+          // TODO: handle errors
+          self.emit('registered', conn, groups);
+        });
+      }
+    });
+    // TODO: consider moving out
+    conn.on('close', function() {
+      self.unregister(conn, function(err, groups) {
+        // TODO: handle errors
+        self.emit('unregistered', conn, groups);
+      });
+    });
   });
 }
 
-// inherit from EventEmitter
-Manager.prototype.__proto__ = process.EventEmitter.prototype;
-
-Manager.prototype.nonce = function() {
-  return Math.random().toString().substring(2);
+Manager.prototype.group = function(id) {
+  if (!this.groups[id]) {
+    this.groups[id] = new Group(id, this);
+  }
+  return this.groups[id];
 };
 
 Manager.prototype.handleMessage = function(pattern, channel, message) {
@@ -124,65 +159,65 @@ Manager.prototype.handleMessage = function(pattern, channel, message) {
   }, this.filters);
 };
 
-Manager.prototype.join = function(socket, groups, cb) {
+Manager.prototype.join = function(conn, groups, cb) {
 ///console.log('MJOIN', arguments);
   var self = this;
-  var sid = socket.id;
+  var cid = conn.id;
   var commands = groups.map(function(group) {
-    self.group(group).conns[sid] = socket;
-    return ['sadd', group, sid];
+    self.group(group).conns[cid] = conn;
+    return ['sadd', group, cid];
   });
-  groups.length && commands.push(['sadd', sid + ':g'].concat(groups));
+  groups.length && commands.push(['sadd', cid + ':g'].concat(groups));
   // TODO: publish '//join' for each joined group
   db.multi(commands).exec(cb);
   return this;
 };
 
-Manager.prototype.leave = function(socket, groups, cb) {
+Manager.prototype.leave = function(conn, groups, cb) {
 ///console.log('MLEAVE', arguments);
   var self = this;
-  var sid = socket.id;
+  var cid = conn.id;
   var commands = groups.map(function(group) {
     var g = self.groups[group];
-    g && delete g.conns[sid];
-    return ['srem', group, sid];
+    g && delete g.conns[cid];
+    return ['srem', group, cid];
   });
-  groups.length && commands.push(['srem', sid + ':g'].concat(groups));
+  groups.length && commands.push(['srem', cid + ':g'].concat(groups));
   // TODO: publish '//leave' for each left group
   db.multi(commands).exec(cb);
   return this;
 };
 
-Manager.prototype.member = function(socket, cb) {
-  var sid = socket.id;
-  db.smembers(sid + ':g', cb);
+Manager.prototype.member = function(conn, cb) {
+  var cid = conn.id;
+  db.smembers(cid + ':g', cb);
   return this;
 };
 
-Manager.prototype.socket = function(id) {
-  if (!this.conns[id]) {
-    this.conns[id] = new Socket(id, this);
-  }
-  return this.conns[id];
-};
-
-Manager.prototype.auth = function(socket, cb) {
-  var sid = socket.id;
+Manager.prototype.register = function(conn, cb) {
+  var cid = conn.id;
   var self = this;
-  this.member(socket, function(err, groups) {
+  this.member(conn, function(err, groups) {
     groups.forEach(function(group) {
-      self.group(group).conns[sid] = socket;
+      self.group(group).conns[cid] = conn;
     });
+    self.conns[cid] = conn;
     typeof cb === 'function' && cb(err, groups);
   });
   return this;
 };
 
-Manager.prototype.group = function(id) {
-  if (!this.groups[id]) {
-    this.groups[id] = new Group(id, this);
-  }
-  return this.groups[id];
+Manager.prototype.unregister = function(conn, cb) {
+  var cid = conn.id;
+  var self = this;
+  this.member(conn, function(err, groups) {
+    delete self.conns[cid];
+    groups.forEach(function(group) {
+      self.group(group).conns[cid] = conn;
+    });
+    typeof cb === 'function' && cb(err, groups);
+  });
+  return this;
 };
 
 /**
@@ -316,79 +351,10 @@ Manager.prototype.select = function(or, and, not, flt) {
   return selector;
 };
 
-Socket.prototype.select = function() {
+Connection.prototype.select = function() {
   return this.manager.select.apply(this.manager, arguments);
 };
 
 Group.prototype.select = function() {
   return this.manager.select.apply(this.manager, arguments);
 };
-
-/**
- * 
- * POC code
- * 
- */
-
-//
-// dumb independent workers
-//
-var m1 = new Manager(1000);
-var m2 = new Manager(2000);
-var m3 = new Manager(3000);
-var m4 = new Manager(4000);
-
-//
-// testing broadcasts
-//
-var payload = '0'; for (var i = 0; i < 2; ++i) payload += payload;
-db.multi([
-  ['flushall'],
-  // test groups
-  /*['sadd', 'c:1', 'c:1'],
-  ['sadd', 'c:2', 'c:2'],
-  ['sadd', 'c:3', 'c:3'],
-  ['sadd', 'c:4', 'c:4'],*/
-  // TODO: g:all should be handled automatically
-  ['sadd', 'g:all', 'c:1', 'c:2', 'c:3', 'c:4'],
-  ['sadd', 'g:1allies', 'c:2', 'c:3', 'c:4'],
-  ['sadd', 'g:jslovers', 'c:1', 'c:3'],
-  ['sadd', 'g:banned', 'c:3']
-]).exec(function() {
-
-  function cc(mgr, id) {
-    //var socket = mgr.socket(id);
-    mgr.socket.emit(id);
-    socket.join(id);
-    socket.on('//tick', function() {
-      console.log('TICK for socket', this.manager.id + ':' + this.id);
-    });
-    return socket;
-  }
-
-  var c1 = cc(m1, 'c:1');
-  var c2 = cc(m2, 'c:2'); cc(m2, 'c:1');
-  var c3 = cc(m3, 'c:3');
-  var c4 = cc(m4, 'c:4'); cc(m4, 'c:1');
-console.error('MS', m1, m2, m3, m4);
-/*  setInterval(function() {
-    // this should result in pushing to group 1 only
-    // as ([1] + [2, 3, 4]) * [1, 3] - [3] === [1]
-    c1.broadcast(['c:1', 'g:1allies'], ['g:jslovers'], ['g:banned']).send('//tick', {foo: payload});
-  }, 1000);*/
-/*  setInterval(function() {
-    // this should result in pushing to groups 1, 2
-    // as [1] + [2, 3, 4] - [3, 4] === [1, 2]
-    //c2.select().to(['c:1', 'g:1allies']).not('g:banned', 'c:4').send('//tick', {foo: payload});
-    c2.select().to(['c:1']).to('g:1allies').not('g:banned', 'c:4').send('//tick', {foo: payload});
-  }, 1000);*/
-/*  setInterval(function() {
-    // this should result in pushing to groups 1, 2, 4
-    // as [1] + [2, 3, 4] - [3] === [1, 2, 4]
-    c2.select().to(['c:1', 'g:1allies']).not(['g:banned']).send('//tick', {foo: payload});
-  }, 1100);*/
-  setInterval(function() {
-    // this should result in pushing to all groups 1, 2, 3, 4
-    m4.select('c:1').send('//tick', {foo: payload});
-  }, 1200);
-});
