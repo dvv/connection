@@ -57,10 +57,12 @@ function handleBroadcastMessage(channel, message) {
   if (Array.isArray(args)) {
     process.nextTick(function() {
       for (var cid in conns) {
-        var conn = conns[cid];
-        if (!conn) continue;
-        conn.emit.apply(conn, args);
-        conn.emitter.apply(null, ['event', conn].concat(args));
+        var arr = conns[cid];
+        for (var i = 0, l = arr.length; i < l; ++i) {
+          var conn = arr[i];
+          conn.emit.apply(conn, args);
+          conn.emitter.apply(null, ['event', conn].concat(args));
+        }
       }
     });
   // broadcast to selected connections
@@ -72,11 +74,14 @@ function handleBroadcastMessage(channel, message) {
       if (err) return;
       // N.B. cids === null to broadcast to all
       if (!cids) cids = Object.keys(conns);
-      for (var i = 0, l = cids.length; i < l; ++i) {
-        var conn = conns[cids[i]];
-        if (!conn) continue;
-        conn.emit.apply(conn, args);
-        conn.emitter.apply(null, ['event', conn].concat(args));
+      for (var c = 0, n = cids.length; c < n; ++c) {
+        var arr = conns[cids[c]];
+        if (!arr) continue;
+        for (var i = 0, l = arr.length; i < l; ++i) {
+          var conn = arr[i];
+          conn.emit.apply(conn, args);
+          conn.emitter.apply(null, ['event', conn].concat(args));
+        }
       }
     });
   }

@@ -33,7 +33,7 @@ function Node(port) {
     sockjs_url: 'sockjs.js',
     jsessionid: false,
     // test
-    //disabled_transports: ['websocket']
+    disabled_transports: ['websocket']
   });
   // WebSocket connection handler
   this.ws.installHandlers(this.http, {
@@ -55,13 +55,14 @@ function Node(port) {
   });
   // you can reduce number of closures by listening to catchall event
   this.ws.on('event', function(conn, event /*, args... */) {
-    console.error('EVENT', Array.prototype.slice.call(arguments, 1));
+    ///console.error('EVENT', Array.prototype.slice.call(arguments, 1));
     if (event === 'you typed') {
       conn.ack(arguments[3], arguments[2]);
     } else {
       conn.send.apply(conn, Array.prototype.slice.call(arguments, 1));
     }
   });
+  this.ws.id = port;
   this.ws.on('registered', function(conn) {
     console.error('REGISTERED', conn.id);
     this.send('JOINED: ' + conn.id);
@@ -88,9 +89,17 @@ repl.foo = function() { s1.ws.send('foo'); };
 repl.foo1 = function() { s1.ws.select().send('foo'); };
 repl.conns = function() {
   return [
-    Object.keys(s1.ws.conns),
-    Object.keys(s2.ws.conns),
-    Object.keys(s3.ws.conns),
-    Object.keys(s4.ws.conns)
+    [Object.keys(s1.ws.conns), 0],
+    [Object.keys(s2.ws.conns), 0],
+    [Object.keys(s3.ws.conns), 0],
+    [Object.keys(s4.ws.conns), 0],
   ];
+};
+repl.stress = function(n) {
+  console.error('STRESS started');
+  var t = Date.now();
+  for (var i = 0; i < n; ++i) {
+    s1.ws.select().send('foo' + i);
+  }
+  console.error('STRESS stopped', (Date.now() - t) / 1000 / n);
 };

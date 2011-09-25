@@ -158,6 +158,11 @@ var Manager = require('sockjs').Server;
  * @api private
  */
 
+Array.prototype.remove = function(item) {
+  var index = this.indexOf(item);
+  if (index >= 0) this.splice(index, 1);
+};
+
 Manager.prototype.handleConnections = function() {
   var manager = this;
   // maintain connections
@@ -177,24 +182,22 @@ Manager.prototype.handleConnections = function() {
       }
       // id is negotiated
       conn.id = cid;
-///console.error('OPEN?', cid);
-      // no such connection registered?
+      // register connection
       if (!manager.conns[cid]) {
-        // register connection
-        manager.emit('registered', conn);
+        manager.conns[cid] = [];
       }
-      manager.conns[cid] = conn;
+///console.error('OPEN?', cid, manager.id);
+      manager.conns[cid].push(conn);
     });
   });
   this.on('close', function(conn) {
     var cid = conn.id;
-///console.error('CLOSE?', cid);
-    // N.B. 'close' event arrives later than the new connection
-    // arrives due to reconnection mechanism.
-    // so don't unregister already gone connections
-    if (manager.conns[cid] === conn) {
-      delete manager.conns[cid];
-      manager.emit('unregistered', conn);
+    if (manager.conns[cid]) {
+///console.error('CLOSE?', cid, manager.id);
+      manager.conns[cid].remove(conn);
+      if (!manager.conns[cid].length) {
+        delete manager.conns[cid];
+      }
     }
   });
 };
