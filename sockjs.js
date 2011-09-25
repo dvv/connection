@@ -19,21 +19,13 @@ var slice = Array.prototype.slice;
 var isArray = Array.isArray;
 
 /**
- * Connection constructor
+ * Connection
  *
  * @api public
  */
 
-module.exports = Connection;
-
-function Connection() {
-}
-
-Connection.prototype.connect = function(server) {
-  this.server = server;
-  this.on('close', handleSocketClose.bind(this));
-  this.on('message', handleSocketMessage.bind(this));
-};
+var Connection = require('sockjs/lib/transport').Session;
+Connection.prototype.sendUTF = Connection.prototype.send;
 
 /**
  * Prefix reserved for ack events
@@ -55,7 +47,7 @@ Connection.nonce = function() {
 };
 
 /**
- * Transport: handle incoming messages
+ * Connection: handle incoming messages
  *
  * @api private
  */
@@ -69,23 +61,23 @@ function handleSocketMessage(message) {
   // event?
   if (isArray(args = message)) {
     this.emit.apply(this, args);
-    this.server.emit.apply(this.server, ['wsevent', this].concat(args));
+    this.emitter.apply(null, ['event', this].concat(args));
   // data?
   } else {
     // emit 'data' event
-    this.emit('data', args);
-    this.server.emit('wsdata', this, args);
+    this.emit('message', args);
+    this.emitter('message', this, args);
   }
 }
 
 /**
- * Transport: handle close event
+ * Connection: handle close event
  *
  * @api private
  */
 
 function handleSocketClose() {
-  this.server.emit('wsclose', this);
+  this.emitter('close', this);
 }
 
 /**
@@ -147,14 +139,64 @@ Connection.prototype.ack = function(aid /*, args... */) {
 };
 
 /**
- * Augment and export Transport
+ * Manager
+ *
+ * @api public
  */
 
-var Transport = require('sockjs/lib/transport').Session;
-Transport.prototype.sendUTF = Transport.prototype.send;
-// mixin Connection methods
-for (var i in Connection.prototype) {
-  Transport.prototype[i] = Connection.prototype[i];
-}
+var Manager = require('sockjs').Server;
 
-module.exports = Transport;
+/**
+ * Upgrade this server to handle `this.conns` hash of connections.
+ * Connections are authorized via 'auth' message and make their `id`
+ * property to be persistent across reconnections.
+ *
+ * Introduce 'registered' server event which is emitted when connection
+ * is first open, and 'unregistered' event when connection is gone and
+ * not reconnected.
+ *
+ * @api private
+ */
+
+Manager.prototype.handleConnections = function() {
+  var manager = this;
+  // maintain connections
+  this.conns = {};
+  this.on('open', function(conn) {
+    // install default handlers
+    conn.emitter = this.emit.bind(manager);
+    conn.on('close', handleSocketClose.bind(conn));
+    conn.on('message', handleSocketMessage.bind(conn));
+    // negotiate connection id
+    // challenge. wait for reply no more than 1000 ms
+    conn.expire(1000).send('auth', conn.id, function(err, cid) {
+      // ...response
+      if (err) {
+        conn.close(1011, 'Unauthorized');
+        return;
+      }
+      // id is negotiated
+      conn.id = cid;
+///console.error('OPEN?', cid);
+      // no such connection registered?
+      if (!manager.conns[cid]) {
+        // register connection
+        manager.emit('registered', conn);
+      }
+      manager.conns[cid] = conn;
+    });
+  });
+  this.on('close', function(conn) {
+    var cid = conn.id;
+///console.error('CLOSE?', cid);
+    // N.B. 'close' event arrives later than the new connection
+    // arrives due to reconnection mechanism.
+    // so don't unregister already gone connections
+    if (manager.conns[cid] === conn) {
+      delete manager.conns[cid];
+      manager.emit('unregistered', conn);
+    }
+  });
+};
+
+module.exports = Connection;

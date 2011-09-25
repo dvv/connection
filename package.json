@@ -8,8 +8,7 @@
     ]
   , "dependencies": {
     "simple-mime": "*",
-    "websocket": "*",
-    "useragent": "*",
+    "useragent": "latest",
     "sockjs": "sockjs",
     "sockjs-client": "sockjs-client",
     "redis": "latest",

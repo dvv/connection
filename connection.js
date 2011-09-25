@@ -177,7 +177,7 @@ Connection.decode = JSON.parse;
  */
 
 function handleSocketMessage(event) {
-console.log('INMESSAGE', event);
+///console.log('INMESSAGE', event);
   var message = event.data;
   if (!message) return;
   var args;
@@ -251,7 +251,8 @@ function handleSocketClose(ev) {
   // orderly closed?
   var wasClean = ev.wasClean || ev.status === 1000;
   // reconnect is not disabled and not orderly closed?
-  if (this.reconnectTimeout && !wasClean) {
+  // and not unauthorized?
+  if (this.reconnectTimeout && !wasClean && ev.status !== 1011) {
     // shedule reconnect
     var self = this;
     setTimeout(function() {
