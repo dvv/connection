@@ -46,15 +46,12 @@ Manager.prototype.handleBroadcast = function(options) {
   if (!this.conns) throw 'Connection plugin must be applied first';
   if (!options) options = {};
   // subscribe to broadcast messages
-  var ZMQ = require('zeromq');
-  var sub = ZMQ.createSocket('sub');
-  sub.connect(options.broker || 'tcp://127.0.0.1:5555');
-  sub.subscribe('');
+  var sub = require('redis').createClient();
+  sub.subscribe('bcast');
   sub.on('message', handleBroadcastMessage.bind(this));
   // provide publisher
-  var pub = ZMQ.createSocket('pub');
-  pub.connect(options.broker || 'tcp://127.0.0.1:5554');
-  this.publish = pub.send.bind(pub);
+  var db = require('redis').createClient();
+  this.publish = db.publish.bind(db, 'bcast');
 }
 
 function handleBroadcastMessage(message) {
