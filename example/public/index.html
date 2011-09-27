@@ -33,8 +33,9 @@
 <head><body lang="en">
     <h2>Majek/SockJS-Node Echo Connection example</h2>
       <form id="form">
-        <input id="input" autocomplete="off" class="box" align=top
+        <input id="input" autocomplete="off" class="box1" align=top
                value="type something here" />
+        <button onclick="conn.send('dostress', 1000); return false;">Trigger receiving of 1000 foo messages</button>
       </form>
     <script>
       function log(m) {

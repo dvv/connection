@@ -58,6 +58,8 @@ function Node(port) {
     ///console.error('EVENT', Array.prototype.slice.call(arguments, 1));
     if (event === 'you typed') {
       conn.ack(arguments[3], arguments[2]);
+    } else if (event === 'dostress') {
+      repl.stress(+arguments[2]);
     } else {
       conn.send.apply(conn, Array.prototype.slice.call(arguments, 1));
     }

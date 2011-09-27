@@ -19,7 +19,14 @@ try {
   };
 }
 
+/**
+ * Well-known useful shortcuts and shims
+ *
+ * @api private
+ */
+
 var slice = Array.prototype.slice;
+var isArray = Array.isArray;
 
 /**
  * Manager
@@ -54,7 +61,7 @@ function handleBroadcastMessage(channel, message) {
   // distribute
   var conns = this.conns;
   // broadcast to all connections?
-  if (Array.isArray(args)) {
+  if (isArray(args)) {
     process.nextTick(function() {
       for (var cid in conns) {
         var arr = conns[cid];
@@ -67,23 +74,39 @@ function handleBroadcastMessage(channel, message) {
     });
   // broadcast to selected connections
   } else {
-    // FIXME: reconsider!
+    // FIXME: reconsider?
     var rules = args.r;
     args = args.d;
-    this.getIds(rules, function(err, cids) {
-      if (err) return;
-      // N.B. cids === null to broadcast to all
-      if (!cids) cids = Object.keys(conns);
-      for (var c = 0, n = cids.length; c < n; ++c) {
-        var arr = conns[cids[c]];
-        if (!arr) continue;
-        for (var i = 0, l = arr.length; i < l; ++i) {
-          var conn = arr[i];
-          conn.emit.apply(conn, args);
-          conn.emitter.apply(null, ['event', conn].concat(args));
+    // rules are array of cids? use them directly
+    if (isArray(rules)) {
+      process.nextTick(function() {
+        for (var c = 0, n = rules.length; c < n; ++c) {
+          var arr = conns[rules[c]];
+          if (!arr) continue;
+          for (var i = 0, l = arr.length; i < l; ++i) {
+            var conn = arr[i];
+            conn.emit.apply(conn, args);
+            conn.emitter.apply(null, ['event', conn].concat(args));
+          }
         }
-      }
-    });
+      });
+    // rules are selection criteria
+    } else {
+      this.getIds(rules, function(err, cids) {
+        if (err) return;
+        // N.B. cids === null to broadcast to all
+        if (!cids) cids = Object.keys(conns);
+        for (var c = 0, n = cids.length; c < n; ++c) {
+          var arr = conns[cids[c]];
+          if (!arr) continue;
+          for (var i = 0, l = arr.length; i < l; ++i) {
+            var conn = arr[i];
+            conn.emit.apply(conn, args);
+            conn.emitter.apply(null, ['event', conn].concat(args));
+          }
+        }
+      });
+    }
   }
 }
 
@@ -108,8 +131,27 @@ Manager.prototype.getIds = function(rules, cb) {
  */
 
 Manager.prototype.send = function(/* args... */) {
-  var s = codec.encode(slice.call(arguments));
+  var obj = slice.call(arguments);
+  if (this._forall) {
+    obj = {
+      r: this._forall,
+      d: obj
+    };
+    delete this._forall;
+  }
+  var s = codec.encode(obj);
   return this.publish(s);
+};
+
+/**
+ * Broadcast arguments to all connections of specified `id`
+ *
+ * @api public
+ */
+
+Manager.prototype.forall = function(id) {
+  this._forall = slice.call(arguments);
+  return this;
 };
 
 /**
@@ -131,7 +173,7 @@ Manager.prototype.select = function(to, only, not) {
  */
 
 function Select(to, only, not) {
-  if (to === Object(to) && !Array.isArray(to)) {
+  if (to === Object(to) && !isArray(to)) {
     this.rules = to;
   } else {
     this.rules = {};
@@ -146,7 +188,7 @@ Select.prototype.to = function(to) {
   // list of union criteria
   if (to) {
     if (!this.rules.or) this.rules.or = [];
-    this.rules.or = this.rules.or.concat(Array.isArray(to) ?
+    this.rules.or = this.rules.or.concat(isArray(to) ?
       to :
       slice.call(arguments));
   }
@@ -157,7 +199,7 @@ Select.prototype.only = function(and) {
   // list of intersection criteria
   if (and) {
     if (!this.rules.and) this.rules.and = [];
-    this.rules.and = this.rules.and.concat(Array.isArray(and) ?
+    this.rules.and = this.rules.and.concat(isArray(and) ?
       and :
       slice.call(arguments));
   }
@@ -168,7 +210,7 @@ Select.prototype.not = function(not) {
   // list of exclusion criteria
   if (not) {
     if (!this.rules.not) this.rules.not = [];
-    this.rules.not = this.rules.not.concat(Array.isArray(not) ?
+    this.rules.not = this.rules.not.concat(isArray(not) ?
       not :
       slice.call(arguments));
   }
