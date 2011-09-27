@@ -46,11 +46,12 @@ Manager.prototype.handleBroadcast = function(options) {
   if (!this.conns) throw 'Connection plugin must be applied first';
   if (!options) options = {};
   // subscribe to broadcast messages
-  var sub = require('redis').createClient();
+  var Redis = require('redis');
+  var sub = Redis.createClient();
   sub.subscribe('bcast');
   sub.on('message', handleBroadcastMessage.bind(this));
   // provide publisher
-  var db = require('redis').createClient();
+  var db = Redis.createClient();
   this.publish = db.publish.bind(db, 'bcast');
 }
 
