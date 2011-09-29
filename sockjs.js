@@ -174,6 +174,7 @@ Manager.prototype.handleConnections = function() {
     conn.on('message', handleSocketMessage.bind(conn));
     // negotiate connection id
     // challenge. wait for reply no more than 1000 ms
+conn.id = '111';
     conn.expire(1000).send('auth', conn.id, function(err, cid) {
       // ...response
       if (err) {

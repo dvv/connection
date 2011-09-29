@@ -317,8 +317,8 @@ Connection.prototype.close = function() {
 
 Connection.prototype.reopen = function(delay) {
   if (this.socket) {
-    this.reconnectTimeout = delay || 100;
-    this.socket.close();
+    this.reconnectTimeout = delay || Connection.RECONNECT_TIMEOUT;
+    this.socket.close(1001);
   }
   return this;
 };

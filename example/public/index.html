@@ -68,6 +68,9 @@
       conn.on('close', function() {
           log(' [*] Closed');
       });
+      conn.on('was typed', function(result) {
+        log(' [ ] received forallsuch: ' + result);
+      });
       conn.open();
 
       $('#input').focus();

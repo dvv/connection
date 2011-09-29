@@ -1,4 +1,4 @@
-// SockJS client, version 0.0.4.21.g1bde, MIT License
+// SockJS client, version 0.0.4.23.g33ec, MIT License
 //     https://github.com/sockjs/sockjs-client
 
 // JSON2 by Douglas Crockford (minified).
@@ -474,7 +474,7 @@ var SockJS = function(url, protocols, options) {
 // Inheritance
 SockJS.prototype = new REventTarget();
 
-SockJS.version = "0.0.4.21.g1bde";
+SockJS.version = "0.0.4.23.g33ec";
 
 SockJS.CONNECTING = 0;
 SockJS.OPEN = 1;
@@ -590,6 +590,7 @@ SockJS.prototype._try_next_protocol = function(close_event) {
         }
         // Some protocols require chunking, we may need to run the
         // test beforehand.
+console.log('TRYING', protocol);
         if (SockJS[protocol] &&
               SockJS[protocol].need_chunking === true &&
               that._options.chunking === undefined) {

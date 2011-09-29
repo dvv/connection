@@ -33,7 +33,7 @@ function Node(port) {
     sockjs_url: 'sockjs.js',
     jsessionid: false,
     // test
-    disabled_transports: ['websocket']
+    //disabled_transports: ['websocket']
   });
   // WebSocket connection handler
   this.ws.installHandlers(this.http, {
@@ -57,7 +57,8 @@ function Node(port) {
   this.ws.on('event', function(conn, event /*, args... */) {
     //console.error('EVENT', Array.prototype.slice.call(arguments, 1));
     if (event === 'you typed') {
-      conn.ack(arguments[3], arguments[2]);
+      //conn.ack(arguments[3], arguments[2]);
+      this.forall(conn.id).send('was typed', arguments[2]);
     } else if (event === 'dostress') {
       repl.stress(+arguments[2]);
     } else {
