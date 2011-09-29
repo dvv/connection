@@ -33,7 +33,7 @@ function Node(port) {
     sockjs_url: 'sockjs.js',
     jsessionid: false,
     // test
-    //disabled_transports: ['websocket']
+    disabled_transports: ['websocket']
   });
   // WebSocket connection handler
   this.ws.installHandlers(this.http, {
