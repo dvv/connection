@@ -48,12 +48,12 @@ Manager.prototype.handleBroadcast = function(options) {
   // subscribe to broadcast messages
   var ZMQ = require('zeromq');
   var sub = ZMQ.createSocket('sub');
-  sub.connect(options.broker || 'tcp://127.0.0.1:5555');
+  sub.connect(options.broker || 'tcp://127.0.0.1:65455');
   sub.subscribe('');
   sub.on('message', handleBroadcastMessage.bind(this));
   // provide publisher
   var pub = ZMQ.createSocket('pub');
-  pub.connect(options.broker || 'tcp://127.0.0.1:5554');
+  pub.connect(options.broker || 'tcp://127.0.0.1:65454');
   this.publish = pub.send.bind(pub);
 }
 

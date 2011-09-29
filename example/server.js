@@ -55,7 +55,7 @@ function Node(port) {
   });
   // you can reduce number of closures by listening to catchall event
   this.ws.on('event', function(conn, event /*, args... */) {
-    ///console.error('EVENT', Array.prototype.slice.call(arguments, 1));
+    //console.error('EVENT', Array.prototype.slice.call(arguments, 1));
     if (event === 'you typed') {
       conn.ack(arguments[3], arguments[2]);
     } else if (event === 'dostress') {
@@ -98,7 +98,7 @@ repl.conns = function() {
   ];
 };
 repl.stress = function(n) {
-  console.error('STRESS started');
+  console.error('STRESS started', n);
   var t = Date.now();
   for (var i = 0; i < n; ++i) {
     s1.ws.select().send('foo' + i);

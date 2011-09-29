@@ -35,8 +35,8 @@
       <form id="form">
         <input id="input" autocomplete="off" class="box1" align=top
                value="type something here" />
-        <button onclick="conn.send('dostress', 1000); return false;">Trigger receiving of 1000 foo messages</button>
       </form>
+      <button onclick="conn.send('dostress', 1000); return false;">Trigger receiving of 1000 foo messages</button>
     <script>
       function log(m) {
           $('#output').append($("<code>").text(m));
