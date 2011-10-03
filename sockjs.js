@@ -18,6 +18,11 @@
 var slice = Array.prototype.slice;
 var isArray = Array.isArray;
 
+Array.prototype.remove = function(item) {
+  var index = this.indexOf(item);
+  if (index >= 0) this.splice(index, 1);
+};
+
 /**
  * Connection
  *
@@ -61,12 +66,10 @@ function handleSocketMessage(message) {
   // event?
   if (isArray(args = message)) {
     this.emit.apply(this, args);
-    this.emitter.apply(null, ['event', this].concat(args));
   // data?
   } else {
     // emit 'data' event
     this.emit('message', args);
-    this.emitter('message', this, args);
   }
 }
 
@@ -77,7 +80,6 @@ function handleSocketMessage(message) {
  */
 
 function handleSocketClose() {
-  this.emitter('close', this);
 }
 
 /**
@@ -158,48 +160,43 @@ var Manager = require('sockjs').Server;
  * @api private
  */
 
-Array.prototype.remove = function(item) {
-  var index = this.indexOf(item);
-  if (index >= 0) this.splice(index, 1);
-};
-
-Manager.prototype.handleConnections = function() {
+Manager.prototype.handleConnections = function(sessionHandler) {
   var manager = this;
   // maintain connections
   this.conns = {};
   this.on('open', function(conn) {
     // install default handlers
-    conn.emitter = this.emit.bind(manager);
-    conn.on('close', handleSocketClose.bind(conn));
     conn.on('message', handleSocketMessage.bind(conn));
-    // negotiate connection id
-    // challenge. wait for reply no more than 1000 ms
-conn.id = '111';
-    conn.expire(1000).send('auth', conn.id, function(err, cid) {
-      // ...response
-      if (err) {
-        conn.close(1011, 'Unauthorized');
-        return;
-      }
-      // id is negotiated
-      conn.id = cid;
-      // register connection
-      if (!manager.conns[cid]) {
-        manager.conns[cid] = [];
-      }
-///console.error('OPEN?', cid, manager.id);
-      manager.conns[cid].push(conn);
+    conn.on('auth', function(secret, aid) {
+      // TODO: get rid of assumption on cookie-sessions!
+      // fake HTTP request with passed cookies
+      var req = { headers: { cookie: secret } };
+      sessionHandler(req, {}, function() {
+        // req.session is as if we used HTTP request
+        if (req.session && req.session.uid) {
+          var cid = conn.id = req.session.uid;
+          conn.ack(aid, null, req.session);
+          // register connection
+          if (!manager.conns[cid]) {
+            manager.conns[cid] = [];
+          }
+console.error('OPEN', cid, manager.id);
+          manager.conns[cid].push(conn);
+        } else {
+          // ???
+        }
+      });
     });
-  });
-  this.on('close', function(conn) {
-    var cid = conn.id;
-    if (manager.conns[cid]) {
-///console.error('CLOSE?', cid, manager.id);
-      manager.conns[cid].remove(conn);
-      if (!manager.conns[cid].length) {
-        delete manager.conns[cid];
+    conn.on('close', function(conn) {
+      var cid = conn.id;
+      if (manager.conns[cid]) {
+console.error('CLOSE', cid, manager.id);
+        manager.conns[cid].remove(conn);
+        if (!manager.conns[cid].length) {
+          delete manager.conns[cid];
+        }
       }
-    }
+    });
   });
 };
 
